@@ -4,12 +4,10 @@ author: "Jeffrey Gonlin"
 date: "April 8, 2016"
 output: html_document
 ---
-
 ## Coursera Data Week4 Assignment
 ##################################
 
 setwd("C:/Users/Jeff/Desktop/Week4 Assignment")
-
 library(plyr)
 library(dplyr)
 library(tidyr)
