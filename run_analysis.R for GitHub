@@ -1,0 +1,111 @@
+---
+title: "run_analysisR"
+author: "Jeffrey Gonlin"
+date: "April 8, 2016"
+output: html_document
+---
+
+## Coursera Data Week4 Assignment
+##################################
+
+setwd("C:/Users/Jeff/Desktop/Week4 Assignment")
+
+library(plyr)
+library(dplyr)
+library(tidyr)
+library(R.utils)
+library(data.table)
+
+fileUrl = "https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip"
+download.file(fileUrl, destfile = "./Dataset.zip")
+Sys.Date() #2016-04-02 as of test run
+
+## PLEASE READ BEFORE PROCEDING:
+## TO PRESERVE THE ORIGINAL DATA:  Go to the desktop / WD 'Assignment' folder and open "Dataset.zip"
+## I WOULD DO THIS MANUALLY:
+## COPY the "UCI HAR Dataset" folder but take no other action with it.
+## GO UP ONE LEVEL AND PASTE IT. THIS IS THE FILE I WILL WORK WITH.
+## Both "Dataset.zip" and "UCI HAR Dataset" should be found in: "C:/Users/Jeff/Desktop/Week4 Assignment"
+## The original "Dataset.zip" download will remain untouched as original source data.
+
+#######################################################################################################
+
+datasetunzip <- unzip("./Dataset.zip",list=TRUE)
+str(datasetunzip)
+View(datasetunzip)
+
+subject_test <- read.table("./UCI HAR Dataset/test/subject_test.txt")
+subject_train <- read.table("./UCI HAR Dataset/train/subject_train.txt")
+
+X_test <- read.table("./UCI HAR Dataset/test/X_test.txt", sep = "")
+X_train <- read.table("./UCI HAR Dataset/train/X_train.txt", sep = "")
+
+y_test <- read.table("./UCI HAR Dataset/test/y_test.txt", sep = "")
+y_train <- read.table("./UCI HAR Dataset/train/y_train.txt", sep = "")
+
+subjects <- bind_rows(subject_test, subject_train)
+activities <- bind_rows(y_test, y_train)
+feature_vectors <- bind_rows(X_test, X_train)
+
+activity_labels <- read.table("./UCI HAR Dataset/activity_labels.txt")
+activities1 <- data.table(gsub(1, "walking", activities$V1)) 
+activities2 <- data.table(gsub(2, "walkingupstairs", activities1$V1)) 
+activities3 <- data.table(gsub(3, "wakingdownstairs", activities2$V1))
+activities4 <- data.table(gsub(4, "sitting", activities3$V1)) 
+activities5 <- data.table(gsub(5, "standing", activities4$V1))
+activities6 <- data.table(gsub(6, "laying", activities5$V1))
+
+rm(activities, activities1, activities2, activities3, activities4, activities5, activity_labels) # Not needed
+
+subjects <- mutate(subjects, index = seq_along(V1)) 
+activities6 <- mutate(activities6, index = seq_along(V1)) 
+
+colnames(subjects) <- c("subject", "index")
+colnames(activities6) <- c("activity", "index")
+
+subjects_activities <- merge(subjects, activities6)
+
+
+features <- read.table("./UCI HAR Dataset/features.txt", sep = "")
+str(features)  ## dim = 561 obs x 2 variables. 
+
+featuresV2 <- c(as.character(features$V2))
+featuresV2 <- tolower(featuresV2)
+featuresV2 <- gsub("[()]", "", featuresV2)
+feature_vectors <- setNames(feature_vectors, featuresV2)
+
+feature_vectors_meanlabels <- data.frame(select_vars(colnames(feature_vectors), matches(".mean.")))
+feature_vectors_stdlabels <- data.frame(select_vars(colnames(feature_vectors), matches(".std.")))
+
+feature_vectors_meanlabels_unwanted <- data.frame(select_vars(rownames(feature_vectors_meanlabels), matches("^Angle.")))
+feature_vectors_meanlabels <- slice(feature_vectors_meanlabels, -c(47:53))
+rm(feature_vectors_meanlabels_unwanted)
+
+rownames(feature_vectors_meanlabels) <- feature_vectors_meanlabels[ ,1]
+
+colnames(feature_vectors_meanlabels) <- c("mean_std_labels")
+colnames(feature_vectors_stdlabels) <- c("mean_std_labels")
+feature_vectors_mean_std_labels <- rbind(feature_vectors_meanlabels, feature_vectors_stdlabels)
+rm(feature_vectors_meanlabels, feature_vectors_stdlabels)
+
+feature_vectorsDT <- as.data.table(feature_vectors)
+ 
+feature_vectors_mean_std_cols <- feature_vectorsDT[,c(rownames(feature_vectors_mean_std_labels)), with=FALSE]
+
+feature_vectors_mean_std_cols <- mutate(feature_vectors_mean_std_cols, index=seq_len(10299))
+one_data_set <- merge(subjects_activities, feature_vectors_mean_std_cols)
+one_data_set <- as.data.table(one_data_set)
+View(one_data_set)
+
+tidy_data_set <- one_data_set
+
+tidy_data_set <- tidy_data_set[,index:= NULL]
+
+tidy_data_grouped_averaged <- ddply(tidy_data_set, .(subject, activity), colwise(mean))
+
+rm(activities6, subjects, subjects_activities, subject_train, subject_test, X_test, X_train, y_test, y_train, features)
+
+View(tidy_data_grouped_averaged)
+
+write.table(tidy_data_grouped_averaged, file = "C:/Users/Jeff/Desktop/Week4 Assignment/tidy_data_grouped_averaged_saved", sep="\t", row.name=FALSE)
+
