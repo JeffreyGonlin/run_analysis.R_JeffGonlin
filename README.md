@@ -17,3 +17,4 @@ Included in this repo you should find:
 - Codebook for this assignment in both Word and MD formats
 - run_analysis.R  to provide the code itself
 - tidy_data_grouped_averaged_saved  provides the mean & std dev measurements grouped by subject and activity
+- an annotated instruction list in Word containing code with comments
